@@ -110,11 +110,11 @@ anthropic_api_key = None
 ## 📂 Project Structure
 
 ```
-agentic-medical-ai/
+AgenticMedicalAi/
 │
-├── app.py                        # Streamlit UI
+├── ui.py                        # Streamlit UI
 ├── agentclinic/
-│   └── ui_main.py                # Core agent execution logic
+│   └── agentclinic.py                # Core agent execution logic
 │   └── agents/                   # Doctor, Patient, etc.
 │   └── scenarios/                # Sample and custom scenario loaders
 │
@@ -140,7 +140,7 @@ agentic-medical-ai/
 
 ## 🧑‍💻 Contributors
 
-- [Himanshu Raj](https://github.com/himanshurajhr8)
+- [Himanshu Raj](https://github.com/himanshuhr8)
 
 ---
 
