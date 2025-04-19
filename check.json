@@ -1,0 +1,58 @@
+{
+    "OSCE_Examination": {
+        "Objective_for_Doctor": "Evaluate and diagnose the patient presenting with fatigue, abdominal pain, night sweats, weight loss, and enlarged supraclavicular lymph node.",
+        "Patient_Actor": {
+            "Demographics": "55-year-old male",
+            "History": "The patient reports experiencing fatigue, worsening abdominal pain for the past 4 weeks, excessive night sweats, and a noticeable weight loss of approximately 5.4 kg (12 lb). Additionally, the patient noticed neck swelling developing over the last 4 days.",
+            "Symptoms": {
+                "Primary_Symptom": "Fatigue, abdominal pain",
+                "Secondary_Symptoms": [
+                    "Excessive night sweats",
+                    "Weight loss of 5.4 kg (12 lb)",
+                    "Neck swelling for 4 days"
+                ]
+            },
+            "Past_Medical_History": "The patient does not report any significant past medical history. No previous major illnesses or surgeries.",
+            "Social_History": "The patient has a history of smoking, 1 pack per day for the past 30 years. Drinks alcohol socially. Works in a construction company.",
+            "Review_of_Systems": "Patient also reports feeling an unusual fullness in the belly area and has difficulty wearing his usual clothing due to this. Denies fever, cough, or recent travel."
+        },
+        "Physical_Examination_Findings": {
+            "Vital_Signs": {
+                "Temperature": "36.8°C (98°F)",
+                "Blood_Pressure": "135/80 mmHg",
+                "Heart_Rate": "82 bpm",
+                "Respiratory_Rate": "14 breaths/min"
+            },
+            "Neck_Examination": {
+                "Inspection_and_Palpation": "Nontender, enlarged, and fixed supraclavicular lymph node observed."
+            },
+            "Abdominal_Examination": {
+                "Inspection": "Slight abdominal distension.",
+                "Auscultation": "Normal bowel sounds.",
+                "Percussion": "Dullness noted over the left lower quadrant.",
+                "Palpation": "Splenomegaly detected, without rebound tenderness."
+            }
+        },
+        "Test_Results": {
+            "Blood_Work": {
+                "Complete_Blood_Count": {
+                    "WBC": "Elevated",
+                    "Hemoglobin": "Slightly Decreased",
+                    "Platelets": "Normal"
+                },
+                "Lactate_Dehydrogenase": "Elevated"
+            },
+            "Imaging": {
+                "CT_Scan_Thorax_and_Abdomen": {
+                    "Findings": "Massively enlarged axillary, mediastinal, and cervical lymph nodes."
+                }
+            },
+            "Biopsy": {
+                "Cervical_Lymph_Node": {
+                    "Findings": "Lymphocytes with a high proliferative index that stain positive for CD20."
+                }
+            }
+        },
+        "Correct_Diagnosis": "Diffuse large B-cell lymphoma"
+    }
+}
