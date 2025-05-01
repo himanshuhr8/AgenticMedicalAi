@@ -57,56 +57,174 @@ sample_case = {
     }
 }
 
+sample_case2 = {
+  "image_url": "https://csvc.nejm.org/ContentServer/images?id=IC20240111&width=1500&height=4000",
+  "question": "A 55-year-old woman presented to the dermatology clinic with a 1-year history of skin darkening on her face. Two years before presentation, she had started applying a skin-lightening cream containing hydroquinone to her face daily to treat melasma. On physical examination, bluish-brown patches with background erythema and telangiectasias were observed on the cheeks, nasal bridge, and perioral region, with lesser involvement on the forehead (left). Dermoscopy of the affected areas revealed hyperchromic, pinpoint macules (middle). A skin-biopsy sample from the left cheek showed extracellular deposition of yellow-brown, banana-shaped bodies in the dermis (right, hematoxylin and eosin stain). What is the most likely diagnosis?",
+  "patient_info": "For your role as a patient, you are a 55-year-old woman who has noticed your skin darkening on your face over the past year. You began using a skin-lightening cream containing hydroquinone daily two years ago to address melasma. You've observed bluish-brown patches on your cheeks, nasal bridge, and around your mouth, with some patches also appearing on your forehead. These patches have a background of redness and you've noticed some small, visible blood vessels in these areas. You haven't seen any specific test readings but are aware of the changes in your skin's appearance and texture.",
+  "physical_exams": "The information extracted from the case report relevant to instrument readings and test results includes: 1. Dermoscopy findings: Hyperchromic, pinpoint macules observed in the affected areas. 2. Skin biopsy results: Extracellular deposition of yellow-brown, banana-shaped bodies in the dermis, as revealed by hematoxylin and eosin stain.",
+  "answers": [
+    {
+      "text": "Contact dermatitis",
+      "correct": False
+    },
+    {
+      "text": "Eczematous drug eruption",
+      "correct": False
+    },
+    {
+      "text": "Exogenous ochronosis",
+      "correct": True
+    },
+    {
+      "text": "Lichen planus pigmentosus",
+      "correct": False
+    },
+    {
+      "text": "Solar lentigenes",
+      "correct": False
+    }
+  ]
+}
+
+
 # Sidebar: scenario input
+st.sidebar.header("🗂️ Dataset Selection")
+scenario = None
+dataset_choice = st.sidebar.selectbox(
+    "Choose Dataset Type",
+    options=["MedQA OSCE (Structured Clinical Case)", "NEJM Image Case (MCQ)"],
+    index=0  # default to MedQA
+)
 st.sidebar.header("📋 Scenario Input")
 use_sample = st.sidebar.checkbox("Use Sample Case", value=True)
 uploaded_json = st.sidebar.file_uploader("Upload JSON File", type=["json"])
-
-scenario = None
-
 if use_sample:
-    scenario = sample_case
+    if dataset_choice == "MedQA OSCE (Structured Clinical Case)":
+        scenario = sample_case
+        img_request = False
+    elif dataset_choice == "NEJM Image Case (MCQ)":
+        scenario = sample_case2
+        img_request = True
 elif uploaded_json is not None:
     scenario = json.load(uploaded_json)
+# --- Sidebar additions ---
+st.sidebar.header("🧠 Bias Settings")
+
+# Map the UI string to internal dataset_type
+if dataset_choice == "MedQA OSCE (Structured Clinical Case)":
+    dataset_type = "medqa"
+elif dataset_choice == "NEJM Image Case (MCQ)":
+    dataset_type = "nejm"
+else:
+    dataset_type = "unknown"  # fallback
+
+bias_options = [
+    "None",
+    "recency",
+    "frequency",
+    "false_consensus",
+    "confirmation",
+    "status_quo",
+    "gender",
+    "race",
+    "sexual_orientation",
+    "cultural",
+    "education",
+    "religion",
+    "socioeconomic",
+    "self_diagnosis"
+]
+
+doctor_bias = st.sidebar.selectbox("Select Doctor Bias", options=bias_options, index=0)
+patient_bias = st.sidebar.selectbox("Select Patient Bias", options=bias_options, index=0)
+
+# Sidebar: Inference Settings
+st.sidebar.header("🛠️ Inference Settings")
+
+total_inferences = st.sidebar.slider(
+    "Number of Inference Steps (Doctor-Patient Turns)", 
+    min_value=1, 
+    max_value=20, 
+    value=5,  # Default 5
+    step=1
+)
+# New: Model selection
+st.sidebar.header("🧠 Model Selection (LLM Engine)")
+available_models = [
+    "gemini-2.0-flash",
+    "llama-3.1-8b-instant",
+    "llama3-70b-8192",
+    "llama-guard-3-8b",
+    "gemma2-9b-it"
+]
+selected_model = st.sidebar.selectbox(
+    "Choose Model",
+    options=available_models,
+    index=0
+)
+
+
+
+
 
 if scenario:
-    # Display scenario summary
-    osce = scenario["OSCE_Examination"]
-    st.subheader("🧑‍⚕️ Doctor's Objective")
-    st.info(osce["Objective_for_Doctor"])
+    if "OSCE_Examination" in scenario:
+        # 🧑‍⚕️ Structured MedQA OSCE case (symptoms, tests, diagnosis)
+        osce = scenario["OSCE_Examination"]
+        st.subheader("🧑‍⚕️ Doctor's Objective")
+        st.info(osce["Objective_for_Doctor"])
 
-    st.subheader("🧍‍♀️ Patient Details")
-    patient = osce["Patient_Actor"]
-    st.markdown(f"- **Demographics:** {patient['Demographics']}")
-    st.markdown(f"- **Primary Symptom:** {patient['Symptoms']['Primary_Symptom']}")
-    st.markdown(f"- **Other Symptoms:** {', '.join(patient['Symptoms']['Secondary_Symptoms'])}")
-    with st.expander("Full Patient History"):
-        st.markdown(f"**History:** {patient['History']}")
-        st.markdown(f"**Past Medical History:** {patient['Past_Medical_History']}")
-        st.markdown(f"**Social History:** {patient['Social_History']}")
-        st.markdown(f"**Review of Systems:** {patient['Review_of_Systems']}")
+        st.subheader("🧍‍♀️ Patient Details")
+        patient = osce["Patient_Actor"]
+        st.markdown(f"- **Demographics:** {patient['Demographics']}")
+        st.markdown(f"- **Primary Symptom:** {patient['Symptoms']['Primary_Symptom']}")
+        st.markdown(f"- **Other Symptoms:** {', '.join(patient['Symptoms']['Secondary_Symptoms'])}")
+        with st.expander("Full Patient History"):
+            st.markdown(f"**History:** {patient['History']}")
+            st.markdown(f"**Past Medical History:** {patient['Past_Medical_History']}")
+            st.markdown(f"**Social History:** {patient['Social_History']}")
+            st.markdown(f"**Review of Systems:** {patient['Review_of_Systems']}")
 
-    st.subheader("🧪 Physical & Test Findings")
-    with st.expander("Physical Examination"):
-        st.json(osce["Physical_Examination_Findings"])
-    with st.expander("Test Results"):
-        st.json(osce["Test_Results"])
+        st.subheader("🧪 Physical & Test Findings")
+        with st.expander("Physical Examination"):
+            st.json(osce["Physical_Examination_Findings"])
+        with st.expander("Test Results"):
+            st.json(osce["Test_Results"])
+
+    elif "question" in scenario:
+        # 📸 NEJM Image + MCQ case
+        st.subheader("🧑‍⚕️ Doctor's Objective")
+        st.info(scenario["question"])
+
+        st.image(scenario["image_url"], caption="Relevant Image for Diagnosis")
+
+        st.subheader("🧍‍♀️ Patient Details")
+        st.markdown(f"**Patient Information:** {scenario['patient_info']}")
+
+        st.subheader("🧪 Physical & Test Findings")
+        with st.expander("Physical Examination"):
+            st.markdown(f"**Dermoscopy Findings:** {scenario['physical_exams']}")
+
+        st.subheader("❓ Possible Diagnosis Choices")
+        for answer in scenario["answers"]:
+            is_correct = "✅" if answer["correct"] else "❌"
+            st.markdown(f"- {answer['text']} {is_correct}")
+
+
 gemini_api_key = st.secrets["GEMINI_API_KEY"]
+
 
 if st.button("🤖 Run Agent Diagnosis"):
     with st.spinner("Agent is thinking..."):
         try:
             # Configuration parameters
             gemini_api_key = gemini_api_key
-            doctor_llm = "gemini-2.0-flash"
-            patient_llm = "gemini-2.0-flash"
-            measurement_llm = "gemini-2.0-flash"
-            moderator_llm = "gemini-2.0-flash"
-            inf_type = "agent"
-            doctor_bias = False
-            patient_bias = False
-            img_request = False
-            total_inferences = 5
+            doctor_llm = selected_model
+            patient_llm = selected_model
+            measurement_llm = selected_model
+            moderator_llm = selected_model
+            inf_type = "llm"
+            
             replicate_api_key = None
             openai_api_key = None
             anthropic_api_key = None
@@ -128,7 +246,8 @@ if st.button("🤖 Run Agent Diagnosis"):
                 num_scenarios=num_scenarios,
                 img_request=img_request,
                 total_inferences=total_inferences,
-                anthropic_api_key=anthropic_api_key
+                anthropic_api_key=anthropic_api_key,
+                dataset_type=dataset_type
             )
 
             # ✅ Show final diagnosis

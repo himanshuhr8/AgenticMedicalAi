@@ -1,179 +1,112 @@
 import argparse
-import anthropic
 from transformers import pipeline
-import openai, re, random, time, json, replicate, os
+import openai, re, random, time, json, os
 import google.generativeai as genai
+import streamlit as st
+import re
+import time
+import base64
+import requests
+import os
+import openai
 
-
-
+groq_api_key = st.secrets["GROQ_API_KEY"]
+groq_client =client = openai.OpenAI(
+    base_url="https://api.groq.com/openai/v1/",
+    api_key=groq_api_key)
 def query_model(model_str, prompt, system_prompt, tries=30, timeout=20.0, image_requested=False, scene=None, max_prompt_len=2**14, clip_prompt=False):
-    if model_str not in ["gpt4", "gpt3.5", "gpt4o",  "gpt-4o-mini",  "gpt4v", "claude3.5sonnet", "o1-preview","gemini-2.0-flash"] and "_HF" not in model_str:
-        raise Exception("No model by the name {}".format(model_str))
+    if model_str not in ["gemma2-9b-it", "llama-3.1-8b-instant", "llama-guard-3-8b", "llama3-70b-8192", "gemini-2.0-flash"] and not model_str.startswith("HF_"):
+        raise Exception(f"No model by the name {model_str}")
+
     for _ in range(tries):
-        if clip_prompt: prompt = prompt[:max_prompt_len]
+        if clip_prompt:
+            prompt = prompt[:max_prompt_len]
+
         try:
-            if image_requested:
-                messages = [
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", 
-                    "content": [
-                        {"type": "text", "text": prompt},
-                        {"type": "image_url",
-                            "image_url": {
-                                "url": "{}".format(scene.image_url),
-                            },
-                        },
-                    ]},]
-                if model_str == "gpt4v":
-                    response = openai.ChatCompletion.create(
-                            model="gpt-4-vision-preview",
-                            messages=messages,
-                            temperature=0.05,
-                            max_tokens=200,
-                        )
-                elif model_str == "gpt-4o-mini":
-                    response = openai.ChatCompletion.create(
-                            model="gpt-4o-mini",
-                            messages=messages,
-                            temperature=0.05,
-                            max_tokens=200,
-                        )
-                elif model_str == "gpt4":
-                    response = openai.ChatCompletion.create(
-                            model="gpt-4-turbo",
-                            messages=messages,
-                            temperature=0.05,
-                            max_tokens=200,
-                        )
-                elif model_str == "gpt4o":
-                    response = openai.ChatCompletion.create(
-                            model="gpt-4o",
-                            messages=messages,
-                            temperature=0.05,
-                            max_tokens=200,
-                        )
-                answer = response["choices"][0]["message"]["content"]
-            if model_str == "gpt4":
-                messages = [
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": prompt}]
-                response = openai.ChatCompletion.create(
-                        model="gpt-4-turbo-preview",
-                        messages=messages,
-                        temperature=0.05,
-                        max_tokens=200,
-                    )
-                answer = response["choices"][0]["message"]["content"]
-                answer = re.sub("\s+", " ", answer)
-            elif model_str == "gpt4v":
-                messages = [
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": prompt}]
-                response = openai.ChatCompletion.create(
-                        model="gpt-4-vision-preview",
-                        messages=messages,
-                        temperature=0.05,
-                        max_tokens=200,
-                    )
-                answer = response["choices"][0]["message"]["content"]
-                answer = re.sub("\s+", " ", answer)
-            elif model_str == "gpt-4o-mini":
-                messages = [
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": prompt}]
-                response = openai.ChatCompletion.create(
-                        model="gpt-4o-mini",
-                        messages=messages,
-                        temperature=0.05,
-                        max_tokens=200,
-                    )
-                answer = response["choices"][0]["message"]["content"]
-                answer = re.sub("\s+", " ", answer)
-            elif model_str == "o1-preview":
-                messages = [
-                    {"role": "user", "content": system_prompt + prompt}]
-                response = openai.ChatCompletion.create(
-                        model="o1-preview-2024-09-12",
-                        messages=messages,
-                    )
-                answer = response["choices"][0]["message"]["content"]
-                answer = re.sub("\s+", " ", answer)
-            elif model_str == "gpt3.5":
-                messages = [
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": prompt}]
+            if model_str == "gemini-2.0-flash":
                 try:
-                    print("Calling OpenAI API for gpt-3.5...")
-                    response = openai.ChatCompletion.create(
-                        model="gpt-3.5-turbo",
-                        messages=messages,
-                        temperature=0.05,
-                        max_tokens=200,
-                        timeout=10,
-                    )
-                    print("Response received.")
-                    answer = response["choices"][0]["message"]["content"]
-                    answer = re.sub("\s+", " ", answer)
-                except Exception as e:
-                    print(f"[ERROR calling gpt3.5] {str(e)}")
-                    raise
-
-            elif model_str == "claude3.5sonnet":
-                client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
-                message = client.messages.create(
-                    model="claude-3-5-sonnet-20240620",
-                    system=system_prompt,
-                    max_tokens=256,
-                    messages=[{"role": "user", "content": prompt}])
-                answer = json.loads(message.to_json())["content"][0]["text"]
-            elif model_str == "gpt4o":
-                messages = [
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": prompt}]
-                response = openai.ChatCompletion.create(
-                        model="gpt-4o",
-                        messages=messages,
-                        temperature=0.05,
-                        max_tokens=200,
-                    )
-                answer = response["choices"][0]["message"]["content"]
-                answer = re.sub("\s+", " ", answer)
-            elif model_str == "gemini-2.0-flash":
-                try:
-                    # Initialize the model
                     model = genai.GenerativeModel("gemini-2.0-flash")
-                    
-                    # Prepare the prompt (system and user)
-                    messages = [
-                        {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": prompt}
-                    ]
-                    
-                    # Generate the response
-                    response = model.generate_content(system_prompt + "\n" + prompt)
-                    
-                    # Extract answer from response (ensure that it's processed similarly to others)
-                    answer = response.text
-                    answer = re.sub(r"\s+", " ", answer)  # Clean up the answer
 
+                    if image_requested:
+                        image_url = scene.get("image_url") if isinstance(scene, dict) else scene.image_url
+                        response = requests.get(image_url)
+                        if response.status_code != 200:
+                            raise Exception(f"Failed to download image from {image_url}")
+
+                        image_base64 = base64.b64encode(response.content).decode('utf-8')
+
+                        prompt_parts = [
+                            {"text": system_prompt},
+                            {"text": prompt},
+                            {"inline_data": {"mime_type": "image/jpeg", "data": image_base64}}
+                        ]
+                        response = model.generate_content(prompt_parts)
+                    else:
+                        prompt_parts = [{"text": system_prompt + "\n" + prompt}]
+                        response = model.generate_content(prompt_parts)
+
+                    answer = response.text
+                    answer = re.sub(r"\s+", " ", answer)
                     return answer
 
                 except Exception as e:
-                    # Log the error and raise the exception
                     print(f"[ERROR calling gemini-2.0-flash] {str(e)}")
                     raise
 
-            elif "HF_" in model_str:
-                input_text = system_prompt + prompt 
-                #if self.pipe is None:
-                #    self.pipe = load_huggingface_model(self.backend.replace("HF_", ""))
-                raise Exception("Sorry, fixing TODO :3") #inference_huggingface(input_text, self.pipe)
-            return answer
-        
+            elif model_str == "llama-3.1-8b-instant":
+                messages = [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": prompt},
+                ]
+                response = groq_client.chat.completions.create(
+                    model="llama-3.1-8b-instant",
+                    messages=messages,
+                )
+                return re.sub(r"\s+", " ", response.choices[0].message.content)
+            elif model_str == "llama-guard-3-8b":
+                messages = [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": prompt},
+                ]
+                response = groq_client.chat.completions.create(
+                    model="llama-guard-3-8b",
+                    messages=messages,
+                )
+                return re.sub(r"\s+", " ", response.choices[0].message.content)
+            elif model_str == "llama3-70b-8192":
+                messages = [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": prompt},
+                ]
+                response = groq_client.chat.completions.create(
+                    model="llama3-70b-8192",
+                    messages=messages,
+                )
+                return re.sub(r"\s+", " ", response.choices[0].message.content)
+            elif model_str == "gemma2-9b-it":
+                messages = [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": prompt},
+                ]
+                response = groq_client.chat.completions.create(
+                    model="gemma2-9b-it",
+                    messages=messages,
+                )
+                return re.sub(r"\s+", " ", response.choices[0].message.content)
+
+            elif model_str.startswith("HF_"):
+                            raise Exception("HF models not supported here. Use Groq models only.")
+
+            else:
+                            raise Exception("Backend not implemented properly yet.")
+
         except Exception as e:
+            print(f"[DEBUG] Exception in query_model, retrying after {timeout} seconds: {e}")
             time.sleep(timeout)
             continue
-    raise Exception("Max retries: timeout")
+
+    raise Exception("Max retries reached: query_model timeout.")
+
 
 
 
@@ -283,7 +216,6 @@ class ScenarioLoaderMedQAExtended:
         if id is None: return self.sample_scenario()
         return self.scenarios[id]
         
-
 
 class ScenarioMIMICIVQA:
     def __init__(self, scenario_dict) -> None:
@@ -401,6 +333,35 @@ class ScenarioLoaderNEJM:
     
     def get_scenario(self, id):
         if id is None: return self.sample_scenario()
+        return self.scenarios[id]
+
+class SingleScenarioLoaderNEJM:
+    def __init__(self, scenario_dicts) -> None:
+        print("[DEBUG] Type of scenario_dicts:", type(scenario_dicts))
+        print(scenario_dicts)
+        
+        if isinstance(scenario_dicts, dict):
+            print("[DEBUG] scenario_dicts is a single dict, wrapping in list")
+            scenario_dicts = [scenario_dicts]
+        
+        for i, s in enumerate(scenario_dicts):
+            print(f"[DEBUG] Scenario {i} type: {type(s)}")
+            print(f"[DEBUG] Scenario {i} content preview: {str(s)[:100]}")  # preview first 100 chars
+
+        try:
+            self.scenarios = [ScenarioNEJM(s) for s in scenario_dicts]
+        except Exception as e:
+            print("[ERROR] Failed to parse scenarios in ScenarioNEJM:", e)
+            raise
+        
+        self.num_scenarios = len(self.scenarios)
+
+    def sample_scenario(self):
+        return self.scenarios[random.randint(0, self.num_scenarios - 1)]
+    
+    def get_scenario(self, id):
+        if id is None:
+            return self.sample_scenario()
         return self.scenarios[id]
 
 
@@ -564,7 +525,27 @@ class DoctorAgent:
         print("[DEBUG] Received doctor response from model.")
         self.agent_hist += question + "\n\n" + answer + "\n\n"
         self.infs += 1
+
+        # 🔥 ADD THIS: if doctor says REQUEST IMAGES, send image
+        if ("REQUEST IMAGES" in answer) and not image_requested:
+            print("[DEBUG] Doctor requested images, sending image...")
+            try:
+                image_answer = query_model(
+                    self.backend,
+                    "\nHere is a history of your dialogue: " + self.agent_hist +
+                    "\n[Patient sends requested medical images.]\nDoctor: ",
+                    sys_prompt,
+                    image_requested=True,
+                    scene=self.scenario
+                )
+                print("[DEBUG] Received image-based response from model.")
+                self.agent_hist += "[Image-based response]\n\n" + image_answer + "\n\n"
+                answer += "\n\n[Image-based response]:\n" + image_answer
+            except Exception as e:
+                print("[ERROR] Failed during image request:", e)
+
         return answer
+
 
 
     def system_prompt(self) -> str:
@@ -718,7 +699,7 @@ def main(gemini_api_key,api_key, replicate_api_key, inf_type, doctor_bias, patie
 
 def ui_main(gemini_api_key, scenario_dict, api_key, replicate_api_key, inf_type, doctor_bias, patient_bias,
             doctor_llm, patient_llm, measurement_llm, moderator_llm, num_scenarios, img_request,
-            total_inferences, anthropic_api_key=None):
+            total_inferences, anthropic_api_key=None,dataset_type="medqa"):
     
     print("[DEBUG] Entered main()")  # 🐞 DEBUG
 
@@ -737,7 +718,12 @@ def ui_main(gemini_api_key, scenario_dict, api_key, replicate_api_key, inf_type,
         print("[DEBUG] Using anthropic model")  # 🐞 DEBUG
         os.environ["ANTHROPIC_API_KEY"] = anthropic_api_key
 
-    scenario_loader = SingleScenarioLoader(scenario_dict)
+    if dataset_type == "nejm":
+            scenario_loader = SingleScenarioLoaderNEJM(scenario_dict)
+    elif dataset_type == "medqa":
+            scenario_loader = SingleScenarioLoader(scenario_dict)
+    else:
+            raise ValueError(f"Unsupported dataset_type: {dataset_type}")
     print("[DEBUG] Dataset loaded. Total scenarios:", scenario_loader.num_scenarios)  # 🐞 DEBUG
 
     total_correct = 0
@@ -774,9 +760,15 @@ def ui_main(gemini_api_key, scenario_dict, api_key, replicate_api_key, inf_type,
                 pi_dialogue += "This is the final question. Please provide a diagnosis.\n"
 
             if inf_type == "human_doctor":
-                doctor_dialogue = input("\nQuestion for patient: ")
+                user_question = st.text_input("Your Question to Patient:", key=f"human_doctor_input_{_inf_id}")
+                if st.button(f"Send Question {_inf_id}"):
+                    doctor_dialogue = user_question
+                else:
+                    # Wait until the button is clicked to proceed
+                    st.stop()
             else:
                 doctor_dialogue = doctor_agent.inference_doctor(pi_dialogue, image_requested=imgs)
+
 
             reasoning_steps.append({"step": f"Doctor Inference {_inf_id + 1}", "details": doctor_dialogue})
             print("Doctor [{}%]:".format(int(((_inf_id + 1) / total_inferences) * 100)), doctor_dialogue)
@@ -803,9 +795,14 @@ def ui_main(gemini_api_key, scenario_dict, api_key, replicate_api_key, inf_type,
                 patient_agent.add_hist(pi_dialogue)
             else:
                 if inf_type == "human_patient":
-                    pi_dialogue = input("\nResponse to doctor: ")
+                    user_response = st.text_input("Your Response to Doctor:", key=f"human_patient_input_{_inf_id}")
+                    if st.button(f"Send Response {_inf_id}"):
+                        pi_dialogue = user_response
+                    else:
+                        st.stop()
                 else:
                     pi_dialogue = patient_agent.inference_patient(doctor_dialogue)
+
 
                 reasoning_steps.append({"step": f"Patient Response {_inf_id + 1}", "details": pi_dialogue})
                 print("Patient [{}%]:".format(int(((_inf_id + 1) / total_inferences) * 100)), pi_dialogue)
